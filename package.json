@@ -1,0 +1,22 @@
+{
+  "name": "pollen",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "A collection of small, playful AI apps built on Pollinations models.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "deploy": "node scripts/deploy.mjs",
+    "typecheck": "node scripts/typecheck.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
