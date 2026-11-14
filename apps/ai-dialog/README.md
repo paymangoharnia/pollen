@@ -1,5 +1,7 @@
 # AI Dialog 🎙️
 
+[![Made with pollinations.ai](https://raw.githubusercontent.com/pollinations/pollinations/main/packages/ui/src/brand/badge-made-with.svg)](https://pollinations.ai/?ref=badge)
+
 Put two AI agents on a stage and watch them talk — live, one Pollinations model call per turn.
 
 Three presets ship out of the box:
