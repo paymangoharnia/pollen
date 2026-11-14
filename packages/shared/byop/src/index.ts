@@ -1,3 +1,7 @@
+// Type-only side effect: register the <polli-connect> JSX element types for
+// consumers (stripped at build time, no runtime import).
+import type {} from "./jsx";
+
 export {
   PolliConnect,
   type PolliConnectProps,

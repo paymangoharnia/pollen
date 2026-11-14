@@ -1,4 +1,4 @@
-import { clsx, type ClassValue } from "./clsx";
+import { clsx } from "./clsx";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
