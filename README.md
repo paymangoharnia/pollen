@@ -26,9 +26,13 @@ Every app ships with an offline demo mode, and goes live with [Pollinations Pay]
 
 ```bash
 npm install
-npm run dev
+npm run dev -w ai-dialog
 ```
 
 ## Deploy
 
-Each app deploys to GitHub Pages from `main`.
+```bash
+npm run deploy
+```
+
+Builds every app under `/apps/<name>/` and publishes the site to GitHub Pages (branch `gh-pages`).

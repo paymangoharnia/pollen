@@ -1,7 +1,8 @@
 // Deploy every app to GitHub Pages.
 //
-// Layout: landing page at the repo site root, each app under /<app-name>/.
-// Strategy: build each app with `vite build --base /<app-name>/`, assemble a
+// Layout: landing page at the repo site root, each app under /apps/<name>/.
+// Strategy: build each app with `vite build --base /<repo>/apps/<name>/`
+// (project Pages serves the whole site under the /<repo>/ prefix), assemble a
 // staging dir, then push it as a single commit to the `gh-pages` branch via a
 // throwaway git repo (no history carried over, idempotent, no extra deps).
 //
@@ -65,7 +66,7 @@ mkdirSync(join(STAGING, "apps"), { recursive: true });
 
 for (const app of apps) {
   console.log(`\n=== Building ${app.name} ===`);
-  run("npx", ["vite", "build", "--base", `/apps/${app.name}/`], { cwd: app.dir });
+  run("npx", ["vite", "build", "--base", `/${GITHUB_REPO}/apps/${app.name}/`], { cwd: app.dir });
   cpSync(join(app.dir, "dist"), join(STAGING, "apps", app.name), { recursive: true });
 }
 
