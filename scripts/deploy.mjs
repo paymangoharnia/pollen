@@ -22,7 +22,9 @@ const onlyApps = process.argv.slice(2).filter((a) => !a.startsWith("-"));
 function run(cmd, args, opts = {}) {
   const res = spawnSync(cmd, args, {
     stdio: "inherit",
-    shell: process.platform === "win32",
+    // npm/npx need the shell on Windows (npm.cmd); git must run WITHOUT a shell
+    // or arguments containing spaces (commit messages) get split apart.
+    shell: process.platform === "win32" && /^(npm|npx)/.test(cmd),
     ...opts,
   });
   if (res.status !== 0) {
