@@ -1,22 +1,39 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AppShell, Badge, Card, clsx } from "@pollen/ui";
+import { AppShell, Badge, Button, Card, clsx } from "@pollen/ui";
 import { PollinationsClient } from "@pollen/pollinations-client";
 import { PolliConnect, usePollenConnect } from "@pollen/byop";
 import { AgentCard } from "./components/AgentCard";
 import { Script } from "./components/Script";
 import { Controls, type Phase } from "./components/Controls";
 import { ShareBar } from "./components/ShareBar";
-import { describeError, runTurn, type DialogueMessage } from "./agent";
+import {
+  describeError,
+  lineGapMs,
+  runTurn,
+  type DialogueMessage,
+  type PlaySpeed,
+} from "./agent";
 import { demoScript } from "./demo";
-import { SCENARIOS, getScenario, type AgentConfig, type Scenario } from "./presets";
-import { decodeState, type SharedDialog } from "./share";
+import {
+  dirFor,
+  detectLang,
+  storeLang,
+  strings,
+  type Lang,
+} from "./i18n";
+import {
+  SCENARIOS,
+  getScenario,
+  type AgentConfig,
+  type Scenario,
+} from "./presets";
+import {
+  decodeState,
+  type SharedDialog,
+} from "./share";
 
 const APP_KEY = import.meta.env.VITE_POLLI_APP_KEY as string | undefined;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-interface AgentModels {
-  models: string[];
-}
 
 function loadShared(): { dialog: SharedDialog } | null {
   const hash = location.hash;
@@ -28,14 +45,20 @@ function loadShared(): { dialog: SharedDialog } | null {
 export default function App() {
   const shared = useRef(loadShared());
 
+  const [lang, setLang] = useState<Lang>(() => {
+    const l = shared.current?.dialog.l;
+    return l === "fa" || l === "en" ? l : detectLang();
+  });
+  const s = strings(lang);
+
   const [scenarioId, setScenarioId] = useState(
     () => shared.current?.dialog.s ?? SCENARIOS[0].id
   );
   const scenario: Scenario = getScenario(scenarioId);
 
   const [agents, setAgents] = useState<[AgentConfig, AgentConfig]>(() => {
-    const s = getScenario(shared.current?.dialog.s ?? SCENARIOS[0].id);
-    return [{ ...s.agents[0] }, { ...s.agents[1] }];
+    const sc = getScenario(shared.current?.dialog.s ?? SCENARIOS[0].id);
+    return [{ ...sc.agents[0] }, { ...sc.agents[1] }];
   });
   const [topic, setTopic] = useState(() => shared.current?.dialog.t ?? "");
   const [history, setHistory] = useState<DialogueMessage[]>(() =>
@@ -45,11 +68,12 @@ export default function App() {
   );
   const [phase, setPhase] = useState<Phase>(shared.current ? "paused" : "idle");
   const [autoPlay, setAutoPlay] = useState(true);
+  const [speed, setSpeed] = useState<PlaySpeed>("normal");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hostNote, setHostNote] = useState("");
   const [demoIndex, setDemoIndex] = useState(0);
-  const [modelOptions, setModelOptions] = useState<AgentModels>({ models: [] });
+  const [modelOptions, setModelOptions] = useState<{ models: string[] }>({ models: [] });
 
   const wallet = usePollenConnect(APP_KEY);
   const clientRef = useRef(new PollinationsClient());
@@ -57,6 +81,18 @@ export default function App() {
   const abortRef = useRef<AbortController | null>(null);
   const autoPlayRef = useRef(autoPlay);
   autoPlayRef.current = autoPlay;
+  const langRef = useRef(lang);
+  langRef.current = lang;
+  const speedRef = useRef(speed);
+  speedRef.current = speed;
+
+  // Language side-effects: <html> direction/lang + document title + persistence.
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    document.documentElement.dir = dirFor(lang);
+    document.title = s.title;
+    storeLang(lang);
+  }, [lang, s.title]);
 
   useEffect(() => {
     clientRef.current.setApiKey(wallet.apiKey);
@@ -104,8 +140,8 @@ export default function App() {
 
   const pickScenario = (id: string) => {
     setScenarioId(id);
-    const s = getScenario(id);
-    setAgents([{ ...s.agents[0] }, { ...s.agents[1] }]);
+    const sc = getScenario(id);
+    setAgents([{ ...sc.agents[0] }, { ...sc.agents[1] }]);
     reset();
   };
 
@@ -124,6 +160,15 @@ export default function App() {
     setBusy(true);
     (async () => {
       try {
+        // Reading gap before each follow-up turn (skipped for manual Step).
+        if (history.length === 0) {
+          await sleep(700);
+          if (cancelled) return;
+        } else if (autoPlayRef.current) {
+          const last = history[history.length - 1];
+          await sleep(lineGapMs(speedRef.current, last?.text ?? ""));
+          if (cancelled) return;
+        }
         if (wallet.isLive) {
           const note = hostNoteRef.current;
           hostNoteRef.current = "";
@@ -133,6 +178,7 @@ export default function App() {
             client: clientRef.current,
             scenario,
             agent,
+            lang: langRef.current,
             topic,
             history,
             hostNote: note || undefined,
@@ -141,9 +187,7 @@ export default function App() {
           if (cancelled) return;
           appendLine(nextIndex, text);
         } else {
-          await sleep(1000);
-          if (cancelled) return;
-          const script = demoScript(scenario.id);
+          const script = demoScript(scenario.id, langRef.current);
           const loops = scenario.id === "endless-interview";
           if (!loops && demoIndex >= script.length) {
             setPhase("idle");
@@ -161,7 +205,7 @@ export default function App() {
         // Next turn re-runs this effect from the dependency change.
       } catch (err) {
         if (cancelled) return;
-        const msg = describeError(err);
+        const msg = describeError(langRef.current, err);
         if (msg) setError(msg);
         setPhase("paused");
       } finally {
@@ -187,11 +231,16 @@ export default function App() {
   const nextIndex = (history.length % 2) as 0 | 1;
   const typingLabel = agents[nextIndex].name;
 
+  const toggleLang = () => setLang((l) => (l === "en" ? "fa" : "en"));
+
   const walletWidget = (
     <>
       <Badge tone={wallet.isLive ? "success" : "pollen"}>
-        {wallet.isLive ? "● live" : "◐ demo"}
+        {wallet.isLive ? s.live : s.demoBadge}
       </Badge>
+      <Button variant="ghost" size="sm" onClick={toggleLang} title="Language / زبان">
+        🌐 {lang === "en" ? "فارسی" : "English"}
+      </Button>
       {APP_KEY ? (
         <PolliConnect
           appKey={APP_KEY}
@@ -211,16 +260,18 @@ export default function App() {
       title="AI Dialog"
       logo={<span className="text-xl">🎙️</span>}
       actions={walletWidget}
+      dir={dirFor(lang)}
+      lang={lang}
       footer={
         <>
-          Demo mode runs offline and free · Live mode uses your own Pollen ·{" "}
+          {s.footer}{" "}
           <a
             href="https://gen.pollinations.ai/docs"
             target="_blank"
             rel="noreferrer"
             className="text-zinc-400 underline decoration-dotted"
           >
-            powered by Pollinations
+            {s.poweredBy}
           </a>
         </>
       }
@@ -228,44 +279,39 @@ export default function App() {
       <div className="space-y-5">
         {!APP_KEY ? (
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-xs leading-relaxed text-zinc-400">
-            You're in <span className="font-semibold text-pollen-300">offline demo mode</span> — the
-            show runs on a canned script, no Pollen spent. To go live, this deployment needs its
-            Pollinations app key configured.
+            {s.demoPre} <span className="font-semibold text-pollen-300">{s.demoMode}</span>{" "}
+            {s.demoPost}
           </div>
         ) : null}
 
         {/* Scenario picker */}
         <div className="flex flex-wrap gap-2">
-          {SCENARIOS.map((s) => (
+          {SCENARIOS.map((sc) => (
             <button
-              key={s.id}
-              onClick={() => pickScenario(s.id)}
+              key={sc.id}
+              onClick={() => pickScenario(sc.id)}
               disabled={phase === "running" || busy}
               className={clsx(
-                "rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-40",
-                scenarioId === s.id
+                "cursor-pointer rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40",
+                scenarioId === sc.id
                   ? "border-pollen-400/60 bg-pollen-400/15 text-pollen-300"
                   : "border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-zinc-500"
               )}
             >
-              {s.emoji} {s.title}
+              {sc.emoji} {sc.title[lang]}
             </button>
           ))}
         </div>
-        <p className="-mt-2 text-xs text-zinc-500">{scenario.tagline}</p>
+        <p className="-mt-2 text-xs text-zinc-500">{scenario.tagline[lang]}</p>
 
         {/* Topic + agents */}
         <Card className="p-4">
-          <label className="block text-xs font-semibold text-zinc-300">Topic / setting</label>
+          <label className="block text-xs font-semibold text-zinc-300">
+            {s.topicLabel}
+          </label>
           <input
             className="mt-2 w-full px-3 py-2 border text-sm"
-            placeholder={
-              scenario.id === "debate-night"
-                ? "e.g. Cats vs dogs"
-                : scenario.id === "late-night"
-                  ? "e.g. The invention of the snooze button"
-                  : "e.g. Interview for a Chief Vibe Officer role"
-            }
+            placeholder={scenario.topicPlaceholder[lang]}
             value={topic}
             maxLength={120}
             disabled={phase === "running" || busy}
@@ -276,6 +322,8 @@ export default function App() {
         <div className="grid gap-3 md:grid-cols-2">
           <AgentCard
             agent={agents[0]}
+            lang={lang}
+            s={s}
             accent="pollen"
             disabled={phase === "running" || busy}
             models={modelOptions.models}
@@ -283,6 +331,8 @@ export default function App() {
           />
           <AgentCard
             agent={agents[1]}
+            lang={lang}
+            s={s}
             accent="bloom"
             disabled={phase === "running" || busy}
             models={modelOptions.models}
@@ -296,30 +346,46 @@ export default function App() {
           agents={agents}
           busy={busy}
           typingLabel={typingLabel}
+          lang={lang}
+          s={s}
         />
 
-        <Controls
-          phase={phase}
-          busy={busy}
-          canStep={true}
-          hostNote={hostNote}
-          error={error}
-          onPhase={(next) => {
-            setError(null);
-            if (next !== "running") abortRef.current?.abort();
-            if (next === "running") setAutoPlay(true);
-            setPhase(next);
-          }}
-          onStep={() => {
-            setError(null);
-            setAutoPlay(false);
-            setPhase("running");
-          }}
-          onReset={reset}
-          onHostNote={sendHostNote}
-        />
+        {/* Controls stick to the viewport bottom while the page scrolls,
+            so Pause is always reachable mid-show. */}
+        <div className="sticky bottom-0 z-10 -mx-4 border-t border-zinc-800/80 bg-zinc-950/85 px-4 py-3 backdrop-blur">
+          <Controls
+            phase={phase}
+            busy={busy}
+            canStep={true}
+            hostNote={hostNote}
+            error={error}
+            s={s}
+            speed={speed}
+            onSpeed={setSpeed}
+            onPhase={(next) => {
+              setError(null);
+              if (next !== "running") abortRef.current?.abort();
+              if (next === "running") setAutoPlay(true);
+              setPhase(next);
+            }}
+            onStep={() => {
+              setError(null);
+              setAutoPlay(false);
+              setPhase("running");
+            }}
+            onReset={reset}
+            onHostNote={sendHostNote}
+          />
+        </div>
 
-        <ShareBar history={history} scenarioId={scenarioId} topic={topic} agents={agents} />
+        <ShareBar
+          history={history}
+          scenarioId={scenarioId}
+          topic={topic}
+          agents={agents}
+          lang={lang}
+          s={s}
+        />
       </div>
     </AppShell>
   );

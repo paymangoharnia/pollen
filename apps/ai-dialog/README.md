@@ -10,10 +10,14 @@ Three presets ship out of the box:
 
 ## Features
 
-- **Editable agents** — rename them, rewrite their personas, pick their models
+- **Bilingual (EN / فارسی)** — one toggle flips everything: UI text, RTL layout, the demo script, and the language the live agents speak in
+- **Editable agents** — rename them, rewrite their personas (per language), pick their models
 - **Director's notes** — whisper instructions to an agent between turns
 - **Auto-play or step-by-step** — let the show run, or advance one turn at a time
-- **Share** — every dialog is encoded in the URL; send the link or copy the transcript
+- **Readable pacing** — reading-speed presets (🐢 / ▶ / ⏩) with per-line reading gaps
+- **Controllable transcript** — scrolling up pauses auto-follow; a ⬇ button re-pins to the newest line
+- **Sticky controls** — Pause is always reachable, even mid-show on a phone
+- **Share** — every dialog (with its language) is encoded in the URL; send the link or copy the transcript
 - **Demo mode** — the whole show runs offline on a canned script, zero cost, no key needed
 - **Live mode** — connect your Pollinations wallet with `<polli-connect>`; spending is scoped (budget: 5 Pollen, 7-day expiry)
 

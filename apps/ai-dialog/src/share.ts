@@ -18,18 +18,27 @@ export function decodeState<T>(encoded: string): T | null {
   }
 }
 
+export type ShareLang = "en" | "fa";
+
 export interface SharedDialog {
   s: string; // scenario id
   t?: string; // topic
+  l?: ShareLang; // language the show was in
   m: Array<{ a: 0 | 1; x: string }>; // messages: agent index + text
 }
 
 export function dialogToShare(
+  lang: ShareLang,
   scenarioId: string,
   topic: string,
   messages: Array<{ agentIndex: 0 | 1; text: string }>
 ): SharedDialog {
-  return { s: scenarioId, t: topic || undefined, m: messages.map((m) => ({ a: m.agentIndex, x: m.text })) };
+  return {
+    s: scenarioId,
+    t: topic || undefined,
+    l: lang,
+    m: messages.map((m) => ({ a: m.agentIndex, x: m.text })),
+  };
 }
 
 export function buildShareLink(dialog: SharedDialog): string {

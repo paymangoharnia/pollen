@@ -8,6 +8,8 @@ export function AppShell({
   children,
   footer,
   maxWidth = "max-w-3xl",
+  dir = "ltr",
+  lang,
 }: {
   title: ReactNode;
   logo?: ReactNode;
@@ -15,9 +17,11 @@ export function AppShell({
   children: ReactNode;
   footer?: ReactNode;
   maxWidth?: string;
+  dir?: "ltr" | "rtl";
+  lang?: string;
 }) {
   return (
-    <div className="flex min-h-dvh flex-col" dir="ltr">
+    <div className="flex min-h-dvh flex-col" dir={dir} lang={lang}>
       <header className="sticky top-0 z-20 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md">
         <div className={`mx-auto flex w-full ${maxWidth} items-center justify-between gap-3 px-4 py-3`}>
           <div className="flex min-w-0 items-center gap-2.5">

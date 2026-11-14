@@ -1,7 +1,11 @@
-import { Button } from "@pollen/ui";
+import { Button, clsx } from "@pollen/ui";
 import type { ReactNode } from "react";
+import type { PlaySpeed } from "../agent";
+import type { Strings } from "../i18n";
 
 export type Phase = "idle" | "running" | "paused";
+
+const SPEED_ICONS: Record<PlaySpeed, string> = { slow: "🐢", normal: "▶", fast: "⏩" };
 
 export function Controls({
   phase,
@@ -9,6 +13,9 @@ export function Controls({
   canStep,
   hostNote,
   error,
+  s,
+  speed,
+  onSpeed,
   onPhase,
   onStep,
   onReset,
@@ -19,6 +26,9 @@ export function Controls({
   canStep: boolean;
   hostNote: string;
   error: string | null;
+  s: Strings;
+  speed: PlaySpeed;
+  onSpeed: (speed: PlaySpeed) => void;
   onPhase: (next: Phase) => void;
   onStep: () => void;
   onReset: () => void;
@@ -35,11 +45,11 @@ export function Controls({
         {phase === "running" ? (
           // Always clickable — pausing mid-turn cancels the in-flight call.
           <Button onClick={() => onPhase("paused")} variant="secondary" size="md">
-            ⏸ Pause
+            ⏸ {s.pause}
           </Button>
         ) : (
           <Button onClick={() => onPhase("running")} disabled={busy} size="md">
-            ▶ {phase === "paused" ? "Resume" : "Start"}
+            ▶ {phase === "paused" ? s.resume : s.start}
           </Button>
         )}
         <Button
@@ -48,15 +58,38 @@ export function Controls({
           disabled={phase === "running" || busy || !canStep}
           title="Play exactly one turn"
         >
-          ⏭ Step
+          ⏭ {s.step}
         </Button>
         <Button variant="ghost" onClick={onReset} disabled={busy}>
-          ↺ Reset
+          ↺ {s.reset}
         </Button>
-        <div className="ml-auto flex w-full min-w-[220px] max-w-sm items-center gap-2">
+
+        {/* Reading speed */}
+        <div className="flex items-center gap-1.5" role="group" aria-label={s.speedLabel}>
+          <span className="text-xs text-zinc-500">{s.speedLabel}</span>
+          {(Object.keys(SPEED_ICONS) as PlaySpeed[]).map((sp) => (
+            <button
+              key={sp}
+              onClick={() => onSpeed(sp)}
+              title={sp}
+              aria-label={`${s.speedLabel}: ${sp}`}
+              aria-pressed={speed === sp}
+              className={clsx(
+                "cursor-pointer rounded-lg border px-2 py-1 text-xs transition-colors",
+                speed === sp
+                  ? "border-pollen-400/60 bg-pollen-400/15 text-pollen-300"
+                  : "border-zinc-700 bg-zinc-900 text-zinc-400 hover:border-zinc-500"
+              )}
+            >
+              {SPEED_ICONS[sp]}
+            </button>
+          ))}
+        </div>
+
+        <div className="ms-auto flex w-full min-w-[220px] max-w-sm items-center gap-2">
           <input
             className="w-full px-3 py-2 border text-sm"
-            placeholder="Whisper to an agent (director's note)…"
+            placeholder={s.hostPh}
             value={hostNote}
             maxLength={200}
             onChange={(e) => onHostNote(e.target.value)}
@@ -69,9 +102,9 @@ export function Controls({
             size="sm"
             disabled={!hostNote.trim() || busy}
             onClick={() => onHostNote(hostNote)}
-            title="Send the note — it shapes the next turn"
+            title={s.send}
           >
-            Send
+            {s.send}
           </Button>
         </div>
       </div>

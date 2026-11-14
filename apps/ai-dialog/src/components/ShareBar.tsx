@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@pollen/ui";
-import { buildShareLink, dialogToShare, encodeState } from "../share";
+import type { Strings } from "../i18n";
+import { buildShareLink, dialogToShare, encodeState, type ShareLang } from "../share";
 import type { DialogueMessage } from "../agent";
 import type { AgentConfig } from "../presets";
 
@@ -9,11 +10,15 @@ export function ShareBar({
   scenarioId,
   topic,
   agents,
+  lang,
+  s,
 }: {
   history: DialogueMessage[];
   scenarioId: string;
   topic: string;
   agents: [AgentConfig, AgentConfig];
+  lang: ShareLang;
+  s: Strings;
 }) {
   const [copied, setCopied] = useState<"link" | "text" | null>(null);
 
@@ -45,16 +50,16 @@ export function ShareBar({
         variant="secondary"
         size="sm"
         onClick={() => {
-          const dialog = dialogToShare(scenarioId, topic, history);
+          const dialog = dialogToShare(lang, scenarioId, topic, history);
           // Keep the address bar in sync so the link can be copied from the URL too.
           window.history.replaceState(null, "", `#d=${encodeState(dialog)}`);
           void copy(buildShareLink(dialog), "link");
         }}
       >
-        {copied === "link" ? "✓ Link copied" : "🔗 Copy share link"}
+        {copied === "link" ? s.linkCopied : `🔗 ${s.shareLink}`}
       </Button>
       <Button variant="ghost" size="sm" onClick={() => copy(asText, "text")}>
-        {copied === "text" ? "✓ Transcript copied" : "📄 Copy transcript"}
+        {copied === "text" ? s.transcriptCopied : `📄 ${s.copyTranscript}`}
       </Button>
     </div>
   );

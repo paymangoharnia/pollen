@@ -1,5 +1,6 @@
 /** Live turn engine — one Pollinations API call per agent turn. */
 import { PollinationsError, type PollinationsClient } from "@pollen/pollinations-client";
+import { strings, type Lang } from "./i18n";
 import type { AgentConfig, Scenario } from "./presets";
 
 export interface DialogueMessage {
@@ -7,18 +8,28 @@ export interface DialogueMessage {
   text: string;
 }
 
+export type PlaySpeed = "slow" | "normal" | "fast";
+
+const SPEED_BASE: Record<PlaySpeed, number> = { slow: 2400, normal: 1500, fast: 700 };
+
+/** Pause between auto-played turns: speed preset + reading time of the last line. */
+export function lineGapMs(speed: PlaySpeed, text: string): number {
+  return SPEED_BASE[speed] + Math.min(3000, text.length * 12);
+}
+
 const MAX_TOKENS = 400;
 
-function systemPrompt(scenario: Scenario, agent: AgentConfig): string {
+function systemPrompt(scenario: Scenario, agent: AgentConfig, lang: Lang): string {
   return [
-    `You are ${agent.name} — ${agent.persona}`,
+    `You are ${agent.name} — ${agent.persona[lang]}`,
     "",
     "Rules:",
     "- Stay fully in character.",
     "- Reply with ONLY your spoken line: 1-3 short sentences, conversational and natural.",
     "- No stage directions, no asterisk actions, no quotes around your line.",
     "- Never speak for the other person.",
-    scenario.stageRule ? `- ${scenario.stageRule}` : "",
+    `- Always write your spoken line in ${lang === "fa" ? "Persian (Farsi)" : "English"}.`,
+    scenario.stageRule ? `- ${scenario.stageRule[lang]}` : "",
   ]
     .filter(Boolean)
     .join("\n");
@@ -35,6 +46,7 @@ export interface TurnInput {
   scenario: Scenario;
   /** The agent whose turn it is. */
   agent: AgentConfig;
+  lang: Lang;
   topic: string;
   history: DialogueMessage[];
   /** Optional one-liner from the human director, consumed this turn. */
@@ -68,7 +80,7 @@ export async function runTurn(input: TurnInput): Promise<string> {
     {
       model: input.agent.model,
       messages: [
-        { role: "system", content: systemPrompt(input.scenario, input.agent) },
+        { role: "system", content: systemPrompt(input.scenario, input.agent, input.lang) },
         { role: "user", content: turnPrompt(input) },
       ],
       temperature: 0.9,
@@ -79,20 +91,22 @@ export async function runTurn(input: TurnInput): Promise<string> {
     { attempts: 2 }
   );
   const text = result.content.trim();
-  if (!text) throw new PollinationsError(500, "Model returned an empty line — try again.");
+  if (!text)
+    throw new PollinationsError(500, strings(input.lang).errEmpty);
   return text;
 }
 
-/** Human-readable hint for common wallet errors. */
-export function describeError(err: unknown): string {
+/** Human-readable hint for common wallet errors (in the active language). */
+export function describeError(lang: Lang, err: unknown): string {
+  const s = strings(lang);
   if (err instanceof PollinationsError) {
     switch (err.code) {
       case "KEY_BUDGET_EXHAUSTED":
-        return "Your connected key's budget is used up. Reconnect the wallet for a fresh scoped key.";
+        return s.errBudget;
       case "INSUFFICIENT_BALANCE":
-        return "Not enough Pollen left on the connected key.";
+        return s.errBalance;
       case "content_blocked":
-        return "The model declined this content — tweak the topic or personas.";
+        return s.errContent;
       default:
         return err.message || `API error (HTTP ${err.status}).`;
     }
