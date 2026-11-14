@@ -1,0 +1,56 @@
+/* Shared theme — import this as your app's CSS entry:
+   import "@pollen/ui/theme.css";
+*/
+@import url("https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap");
+@import "tailwindcss";
+
+/* Scan this package's sources so component classes are always generated,
+   even when resolved through node_modules workspace symlinks. */
+@source "./src";
+
+@theme {
+  --font-sans: "Vazirmatn", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* pollen — golden grains accent */
+  --color-pollen-300: #ffe08a;
+  --color-pollen-400: #ffc83d;
+  --color-pollen-500: #f5b31b;
+  --color-pollen-600: #d99a0f;
+
+  /* bloom — flower pink accent */
+  --color-bloom-400: #f472b6;
+  --color-bloom-500: #ec4899;
+  --color-bloom-600: #db2777;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-zinc-950 text-zinc-100 font-sans antialiased;
+  min-height: 100dvh;
+}
+
+/* RTL-friendly form controls */
+input,
+textarea,
+select {
+  @apply bg-zinc-900 border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  @apply outline-none border-pollen-400 ring-2 ring-pollen-400/30;
+}
+
+::selection {
+  @apply bg-pollen-400/30;
+}
+
+/* Thin dark scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3f3f46 transparent;
+}
