@@ -1,0 +1,28 @@
+# deps
+node_modules/
+.pnpm-store/
+
+# build
+dist/
+.vite/
+
+# env & secrets
+.env
+.env.*
+*.key
+*_sk.txt
+
+# logs & misc
+*.log
+.DS_Store
+Thumbs.db
+_archive_local/
+
+# فایل‌های متا و محرمانه — هرگز در ریپوی عمومی (pollen) کامیت نشوند
+AGENTS.md
+1.md
+.qoderrules
+PROJECT_MAP.md
+ACTIVE_STATE.md
+ROADMAP.md
+zcode-notes.md
