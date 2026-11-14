@@ -6,7 +6,7 @@
   "description": "A collection of small, playful AI apps built on Pollinations models.",
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/shared/*"
   ],
   "scripts": {
     "build": "node scripts/build.mjs",
