@@ -5,6 +5,7 @@ node_modules/
 # build
 dist/
 .vite/
+.deploy-staging/
 
 # env & secrets
 .env
